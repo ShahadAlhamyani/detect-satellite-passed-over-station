@@ -107,8 +107,17 @@ def satellite_position(packet,filename,broken_packet_count):
 
     sat = Satrec.twoline2rv(line1, line2) # create SGP4 satellite object
 
-    jd, fr = jday(2026, 6, 20, 12, 30, 0) # Julian date and fractional day
 
+    arrival_time = packet["arrival_time"]
+
+    jd, fr = jday(
+        arrival_time.year,
+        arrival_time.month,
+        arrival_time.day,
+        arrival_time.hour,
+        arrival_time.minute,
+        arrival_time.second
+    )
 
     error, r, v = sat.sgp4(jd, fr)
 
