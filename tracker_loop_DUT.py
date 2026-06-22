@@ -142,13 +142,29 @@ def satellite_position(packet,filename,broken_packet_count):
     }
 
 
+def calculate_doppler_shift(f0, relative_velocity):
+    c = 300000000
+    
+    doppler_shift = (abs(relative_velocity / c)) * f0
 
-def writting_data(result,csv_filename,i): 
+    if relative_velocity < 0 :
+        received_frequency = f0 + doppler_shift # blue shift
+
+    else:
+        received_frequency = f0 - doppler_shift # red shift
+
+    print(f"Doppler Shift: {doppler_shift:.2f} Hz | Received Frequency: {received_frequency:.2f} Hz")    
+    return doppler_shift, received_frequency
+
+
+
+
+def writting_data(result,csv_filename,i,received_frequency,doppler_shift): 
     with open(csv_filename, "w", newline="") as csv_file:
         writer = csv.writer(csv_file) 
 
         writer.writerow(
-            ["Voltage", "Arrival_Time", "Total_Velocity","Status"]
+            ["Voltage", "Arrival_Time", "Total_Velocity","Status","received_frequency","doppler_shift"]
         )
         
         writer.writerow([
@@ -156,7 +172,9 @@ def writting_data(result,csv_filename,i):
             result["voltage"], 
             result["arrival_time"], 
             result["total_velocity"], 
-            result["status"]
+            result["status"],
+            received_frequency,
+            doppler_shift
         ])
            
     
@@ -169,12 +187,14 @@ print("""
     This code was designed by Shahad Alhamyani, it's an open source feel free to use it!
     """)
 
-
+#variables for now!
 arrival_time = datetime(2026, 6, 20, 7, 0)
+
+
 broken_packet = 0
-
 packets, broken_packet_count = telemetry("../telemetry_log.bin", arrival_time, broken_packet)
-
+f0_target = 437500000
+v_relative = 6500
 
 for i, p in enumerate(packets):
 
@@ -187,8 +207,11 @@ for i, p in enumerate(packets):
     print("Velocity:", result["velocity"]) 
     print("total_velocity:", result["total_velocity"])
     print("status", result["status"])
+
+    received_frequency,doppler_shift = calculate_doppler_shift(f0_target, v_relative)
     
-    writting_data(result,"../satellite_telemetry_log.csv",i)
+    writting_data(result,"../satellite_telemetry_log.csv",i,received_frequency,doppler_shift)
+
 
 if broken_packet_count >= 1:
     print("\n================ Found Broken Packet ================")
