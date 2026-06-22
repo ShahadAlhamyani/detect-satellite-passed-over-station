@@ -1,10 +1,12 @@
 import math
 import os 
 import struct
+import csv
 from sgp4.api import Satrec
 from sgp4.api import jday
 from datetime import datetime, UTC
 from datetime import datetime, timedelta #to increase time manually
+
 
 #Note that there are many (commented printing lines) in the both function, they were for debugging,
 #However i should have written them in the main in the first place so it would not taken much time to add the loop 
@@ -121,17 +123,43 @@ def satellite_position(packet,filename,broken_packet_count):
 
     error, r, v = sat.sgp4(jd, fr)
 
+
+    Vx, Vy, Vz = v  
+    total_velocity = math.sqrt(Vx**2 + Vy**2 + Vz**2)
+    
+    elevation = 15
+    status = "VISIBLE" if elevation > 10 else "NOT VISIBLE"
+
     #print(f"Satellite position is {r} km \nSatellite velocity is {v} km/s \nerror is {error} \n")
     return {
         "position": r,
         "velocity": v,
         "voltage": packet["voltage"],
         "arrival_time": packet["arrival_time"],
-        "broken_packet": broken_packet_count
+        "broken_packet": broken_packet_count,
+        "total_velocity": total_velocity,
+        "status": status
     }
 
 
-      
+
+def writting_data(result,csv_filename,i): 
+    with open(csv_filename, "w", newline="") as csv_file:
+        writer = csv.writer(csv_file) 
+
+        writer.writerow(
+            ["Voltage", "Arrival_Time", "Total_Velocity","Status"]
+        )
+        
+        writer.writerow([
+            #result["packet_number"], 
+            result["voltage"], 
+            result["arrival_time"], 
+            result["total_velocity"], 
+            result["status"]
+        ])
+           
+    
 
 #main
 
@@ -141,7 +169,7 @@ print("""
     This code was designed by Shahad Alhamyani, it's an open source feel free to use it!
     """)
 
-    # add the hoop here to detect more pakets
+
 arrival_time = datetime(2026, 6, 20, 7, 0)
 broken_packet = 0
 
@@ -157,9 +185,14 @@ for i, p in enumerate(packets):
     print("Arrival Time:", result["arrival_time"])
     print("Position:", result["position"])
     print("Velocity:", result["velocity"]) 
+    print("total_velocity:", result["total_velocity"])
+    print("status", result["status"])
+    
+    writting_data(result,"../satellite_telemetry_log.csv",i)
 
 if broken_packet_count >= 1:
     print("\n================ Found Broken Packet ================")
     print(f"Skipping broken packet number {broken_packet_count}")
 
     #end the loop and increase time but no idea how to adjust it cause it's not global variable!
+    
