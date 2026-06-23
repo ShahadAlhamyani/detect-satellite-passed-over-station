@@ -1,6 +1,5 @@
 {
-    "station_name": "Taif_Ground_Station",
-    "latitude": 21.2667,
-    "longitude": 40.4167,
-    "elevation_meters": 1879.0
+    "X_station": 5277.16,
+    "y_station": 3439.15,
+    "z_station": 2297.74
 }
