@@ -2,6 +2,7 @@ import math
 import os 
 import struct
 import csv
+import json
 from sgp4.api import Satrec
 from sgp4.api import jday
 from datetime import datetime, UTC
@@ -121,10 +122,10 @@ def satellite_position(packet,filename,broken_packet_count):
         arrival_time.second
     )
 
-    error, r, v = sat.sgp4(jd, fr)
+    error, position, velocity = sat.sgp4(jd, fr)
 
 
-    Vx, Vy, Vz = v  
+    Vx, Vy, Vz = velocity  
     total_velocity = math.sqrt(Vx**2 + Vy**2 + Vz**2)
     
     elevation = 15
@@ -132,8 +133,8 @@ def satellite_position(packet,filename,broken_packet_count):
 
     #print(f"Satellite position is {r} km \nSatellite velocity is {v} km/s \nerror is {error} \n")
     return {
-        "position": r,
-        "velocity": v,
+        "position": position,
+        "velocity": velocity,
         "voltage": packet["voltage"],
         "arrival_time": packet["arrival_time"],
         "broken_packet": broken_packet_count,
@@ -142,12 +143,34 @@ def satellite_position(packet,filename,broken_packet_count):
     }
 
 
-def calculate_doppler_shift(f0, relative_velocity):
+def calculate_doppler_shift(f0, relative_velocity,filename,position,velocity): #read ground station position 
+    with open (filename, "r") as f:
+        position_station = json.load(f) 
     c = 300000000
-    
-    doppler_shift = (abs(relative_velocity / c)) * f0
+    position_Satellite = position
 
-    if relative_velocity < 0 :
+    #add logic of relative velocity here
+
+
+    #Relative Position Vector(Rx,Ry,Rz)
+    Rx = position_Satellite[0] - position_station["X_station"]
+    Ry = position_Satellite[1] - position_station["y_station"]
+    Rz = position_Satellite[2] - position_station["z_station"]
+
+    R_Norm = math.sqrt(Rx**2 + Ry**2 + Rz**2)
+
+    ux = Rx / R_Norm
+    uy = Ry / R_Norm
+    uz = Rz / R_Norm
+
+    v_relative_km = (ux*velocity[0] + uy*velocity[1] + uz*velocity[2])  
+    v_relative_m = v_relative_km * 1000
+ 
+
+
+    doppler_shift = (abs(v_relative_m / c)) * f0
+
+    if v_relative_m > 0 : ## there are some info related to Range Rate Extraction!
         received_frequency = f0 + doppler_shift # blue shift
 
     else:
@@ -155,6 +178,9 @@ def calculate_doppler_shift(f0, relative_velocity):
 
     print(f"Doppler Shift: {doppler_shift:.2f} Hz | Received Frequency: {received_frequency:.2f} Hz")    
     return doppler_shift, received_frequency
+
+
+    #extend()doppler_shift, received_frequency to be result oorr save result after function name :0
 
 
 
@@ -179,7 +205,7 @@ def writting_data(result,csv_filename,i,received_frequency,doppler_shift):
            
     
 
-#main
+#   -------------------main-------------------      
 
 print("""
     This code is designed to calculate the coordinates(x,y,z) with respect to center of earht and the speed of the satellite 
@@ -208,7 +234,7 @@ for i, p in enumerate(packets):
     print("total_velocity:", result["total_velocity"])
     print("status", result["status"])
 
-    received_frequency,doppler_shift = calculate_doppler_shift(f0_target, v_relative)
+    received_frequency,doppler_shift = calculate_doppler_shift(f0_target, v_relative, "../ground_station.json",result["position"],result["velocity"])
     
     writting_data(result,"../satellite_telemetry_log.csv",i,received_frequency,doppler_shift)
 
