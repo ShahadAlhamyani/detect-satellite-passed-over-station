@@ -180,18 +180,23 @@ def calculate_doppler_shift(f0, relative_velocity,filename,position,velocity): #
     return doppler_shift, received_frequency
 
 
+
+
     #extend()doppler_shift, received_frequency to be result oorr save result after function name :0
 
 
 
 
 def writting_data(result,csv_filename,i,received_frequency,doppler_shift): 
-    with open(csv_filename, "w", newline="") as csv_file:
+    file_exists = os.path.exists(csv_filename)
+
+    with open(csv_filename, "a", newline="") as csv_file:
         writer = csv.writer(csv_file) 
 
-        writer.writerow(
-            ["Voltage", "Arrival_Time", "Total_Velocity","Status","received_frequency","doppler_shift"]
-        )
+        if not file_exists:
+            writer.writerow(
+                ["Voltage", "Arrival_Time", "Total_Velocity","Status","received_frequency","doppler_shift"]
+            )
         
         writer.writerow([
             #result["packet_number"], 
