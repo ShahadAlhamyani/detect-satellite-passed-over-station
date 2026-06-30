@@ -96,7 +96,7 @@ class Tracker:
 
         error, position, velocity = self.sat.sgp4(jd, fr)
 
-                ##it seems that i am not calculating the from tle file##
+                
 
         Vx, Vy, Vz = velocity  
         total_velocity = math.sqrt(Vx**2 + Vy**2 + Vz**2)
