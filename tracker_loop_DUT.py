@@ -16,9 +16,9 @@ class Tracker:
         self.broken_packet = 0 
 
         with open(tle_filename, "r") as f:
-            tle = f.readlines()
+            tle = f.readlines() #earth path (TLE)
 
-        self.sat = Satrec.twoline2rv(
+        self.sat = Satrec.twoline2rv( 
             tle[1].strip(),
             tle[2].strip()
         )
@@ -28,7 +28,7 @@ class Tracker:
 
 
 
-    def telemetry(self,filename):
+    def telemetry(self,filename): # space path (telemetry_log)file
         sync_marker = bytes.fromhex("1ACFFC1D") #bytes
 
         with open(filename, "r") as f: #Space path
@@ -37,7 +37,7 @@ class Tracker:
         data = bytes.fromhex(hex_data) #bytes
         all_packets = [] 
         
-        for i in range(len(data) - 3): #i as int
+        for i in range(len(data) - 3): 
             if data[i:i+4] == sync_marker:
 
                 header = data[i+4:i+10] # 6-byte header
@@ -61,7 +61,7 @@ class Tracker:
 
 
 
-                self.arrival_time = self.arrival_time + timedelta(minutes=1)
+                self.arrival_time = self.arrival_time + timedelta(minutes=1) #timestamp
 
                 all_packets.append({
                     "APID": APID,
@@ -81,9 +81,9 @@ class Tracker:
    
 
 
-    def satellite_position(self,packet):            
+    def satellite_position(self,packet):  #SGP4           
        
-        arrival_time = packet["arrival_time"]
+        arrival_time = packet["arrival_time"]#space path [timestamp]
 
         jd, fr = jday(
             arrival_time.year,
@@ -96,6 +96,7 @@ class Tracker:
 
         error, position, velocity = self.sat.sgp4(jd, fr)
 
+                ##it seems that i am not calculating the from tle file##
 
         Vx, Vy, Vz = velocity  
         total_velocity = math.sqrt(Vx**2 + Vy**2 + Vz**2)
@@ -131,18 +132,22 @@ class Tracker:
         uy = Ry / R_Norm
         uz = Rz / R_Norm
 
-        v_relative_km = (ux * result["velocity"][0] + uy * result["velocity"][1] + uz * result["velocity"][2])  
+        v_relative_km = ( #to find Δv 
+            ux * result["velocity"][0] + 
+            uy * result["velocity"][1] + 
+            uz * result["velocity"][2])  
+        
         v_relative_m = v_relative_km * 1000
     
 
-
+        #Δf=(Δv/c)*f0​
         doppler_shift = (abs(v_relative_m / c)) * self.f0_target
 
-        if v_relative_m > 0 : # there are some info related to Range Rate Extraction!
-            received_frequency = self.f0_target + doppler_shift # blue shift
+        if v_relative_m > 0 : 
+            received_frequency = self.f0_target - doppler_shift # red shift
 
         else:
-            received_frequency = self.f0_target - doppler_shift # red shift
+            received_frequency = self.f0_target + doppler_shift # bule shift
 
         return {
         "doppler_shift": doppler_shift,
